@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadVision AI | Real-Time Infrastructure Damage Assessment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        mint: {
+                            50: '#F0FDF4',
+                            100: '#DCFCE7',
+                            200: '#BBF7D0',
+                            300: '#86EFAC',
+                            400: '#4ADE80',
+                            500: '#22C55E',
+                            600: '#16A34A',
+                            700: '#15803D',
+                            800: '#166534',
+                            900: '#14532D',
+                        },
+                        forest: {
+                            50: '#F0FDF4',
+                            100: '#DCFCE7',
+                            200: '#BBF7D0',
+                            300: '#86EFAC',
+                            400: '#4ADE80',
+                            500: '#22C55E',
+                            600: '#16A34A',
+                            700: '#15803D',
+                            800: '#166534',
+                            900: '#14532D',
+                        }
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                        'fade-in-up-delayed': 'fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards',
+                        'fade-in-up-delayed-2': 'fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards',
+                        'fade-in-up-delayed-3': 'fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s forwards',
+                        'pulse-soft': 'pulseSoft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': {
+                                opacity: '0',
+                                transform: 'translateY(20px)'
+                            },
+                            '100%': {
+                                opacity: '1',
+                                transform: 'translateY(0)'
+                            }
+                        },
+                        pulseSoft: {
+                            '0%, 100%': {
+                                opacity: '1',
+                                boxShadow: '0 0 20px rgba(34, 197, 94, 0.2)'
+                            },
+                            '50%': {
+                                opacity: '0.9',
+                                boxShadow: '0 0 40px rgba(34, 197, 94, 0.4)'
+                            }
+                        },
+                        float: {
+                            '0%, 100%': {
+                                transform: 'translateY(0px)'
+                            },
+                            '50%': {
+                                transform: 'translateY(-10px)'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #F0FDF4 0%, #FFFFFF 100%);
+            min-height: 100vh;
+            color: #166534;
+            overflow-x: hidden;
+        }
+        
+        .milk-glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(220, 252, 231, 0.6);
+            border-radius: 24px;
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .milk-glass-card:hover {
+            background: rgba(255, 255, 255, 0.85);
+            border-color: rgba(34, 197, 94, 0.4);
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px -12px rgba(34, 197, 94, 0.15);
+        }
+        
+        .milk-glass-card-double {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(220, 252, 231, 0.6);
+            border-radius: 24px;
+            position: relative;
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .milk-glass-card-double::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 26px;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(220, 252, 231, 0.5));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .milk-glass-card-double:hover::before {
+            opacity: 1;
+        }
+        
+        .upload-zone {
+            border: 3px dashed rgba(34, 197, 94, 0.4);
+            background: rgba(34, 197, 94, 0.05);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #22C55E;
+            background: rgba(34, 197, 94, 0.1);
+            box-shadow: 0 0 40px rgba(34, 197, 94, 0.2);
+        }
+        
+        .output-monitor {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid rgba(34, 197, 94, 0.3);
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.05);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 253, 244, 0.6) 100%);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(220, 252, 231, 0.6);
+            border-radius: 20px;
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: rgba(34, 197, 94, 0.5);
+            box-shadow: 0 20px 40px rgba(34, 197, 94, 0.2);
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #166534 0%, #22C55E 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+            color: #FFFFFF;
+            font-weight: 700;
+            cursor: pointer !important;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 25px rgba(34, 197, 94, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(34, 197, 94, 0.2);
+            border-top: 4px solid #22C55E;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .visible {
+            display: block;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(220, 252, 231, 0.3);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(34, 197, 94, 0.5);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(34, 197, 94, 0.7);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Background Elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-20 left-10 w-72 h-72 bg-mint-300/20 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 right-10 w-96 h-96 bg-mint-400/20 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-mint-200/15 rounded-full blur-3xl"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="relative z-10 container mx-auto px-4 py-8 max-w-7xl">
+        
+        <!-- Hero Section -->
+        <header class="text-center mb-12 opacity-0 animate-fade-in-up">
+            <div class="inline-block mb-4">
+                <h1 class="text-5xl md:text-7xl font-black tracking-tight mb-2">
+                    <span class="gradient-text">RoadVision AI</span>
+                </h1>
+                <p class="text-forest-800 text-lg md:text-xl font-light tracking-wide opacity-80">
+                    Real-Time Infrastructure Damage Assessment System
+                </p>
+            </div>
+            
+            <!-- Status Indicator -->
+            <div class="milk-glass-card mt-6 py-3 px-6 inline-flex items-center gap-3">
+                <div class="w-3 h-3 bg-mint-500 rounded-full animate-pulse"></div>
+                <span class="mono-font text-sm text-forest-800">
+                    [ STATUS: DEPLOYED & SCANNING ] • [ MODEL: YOLOv8 ACTIVE ] • [ SYSTEM: OPERATIONAL ]
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            
+            <!-- Upload Panel -->
+            <div class="opacity-0 animate-fade-in-up-delayed">
+                <div class="milk-glass-card-double p-8 h-full">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3 text-forest-800">
+                        <svg class="w-6 h-6 text-mint-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <span class="gradient-text">Upload Road Image</span>
+                    </h2>
+                    
+                    <div id="uploadZone" class="upload-zone rounded-2xl p-12 text-center cursor-pointer min-h-[400px] flex flex-col items-center justify-center">
+                        <input type="file" id="fileInput" accept="image/*" class="hidden">
+                        <div id="uploadContent">
+                            <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-mint-200 flex items-center justify-center animate-float">
+                                <svg class="w-10 h-10 text-mint-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <p class="text-xl font-semibold text-forest-700 mb-2">Drag & Drop or Click to Upload</p>
+                            <p class="text-forest-600 text-sm opacity-70">Supports: JPG, PNG, WEBP</p>
+                        </div>
+                        <div id="previewContent" class="hidden w-full">
+                            <img id="previewImage" class="max-h-[300px] mx-auto rounded-lg shadow-2xl" alt="Preview">
+                            <p id="fileName" class="mt-4 text-forest-600 text-sm mono-font"></p>
+                        </div>
+                    </div>
+                    
+                    <button id="analyzeBtn" class="btn-primary w-full mt-6 py-4 rounded-xl text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <span id="btnText">Analyze Image</span>
+                        <span id="btnLoader" class="hidden">
+                            <div class="loading-spinner mx-auto"></div>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Output Monitor -->
+            <div class="opacity-0 animate-fade-in-up-delayed-2">
+                <div class="milk-glass-card-double p-8 h-full">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3 text-forest-800">
+                        <svg class="w-6 h-6 text-mint-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        <span class="gradient-text">Detection Results</span>
+                    </h2>
+                    
+                    <div class="output-monitor rounded-2xl min-h-[400px] flex items-center justify-center">
+                        <div id="outputPlaceholder" class="text-center">
+                            <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-mint-200 flex items-center justify-center">
+                                <svg class="w-10 h-10 text-mint-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </div>
+                            <p class="text-xl font-semibold text-forest-700">Waiting for analysis...</p>
+                            <p class="text-forest-600 text-sm mt-2 opacity-70">Upload an image to see detection results</p>
+                        </div>
+                        <img id="outputImage" class="max-h-[400px] rounded-lg shadow-2xl hidden" alt="Detection Output">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            
+            <!-- Potholes Card -->
+            <div class="stat-card p-6 opacity-0 animate-fade-in-up-delayed">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-forest-700 font-medium">Potholes</h3>
+                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p id="potholeCount" class="text-4xl font-black gradient-text">0</p>
+                <p class="text-forest-600 text-sm mt-2 opacity-70">Detected</p>
+            </div>
+
+            <!-- Cracks Card -->
+            <div class="stat-card p-6 opacity-0 animate-fade-in-up-delayed-2">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-forest-700 font-medium">Cracks</h3>
+                    <div class="w-10 h-10 rounded-full bg-mint-200 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-mint-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p id="crackCount" class="text-4xl font-black gradient-text">0</p>
+                <p class="text-forest-600 text-sm mt-2 opacity-70">Detected</p>
+            </div>
+
+            <!-- Manholes Card -->
+            <div class="stat-card p-6 opacity-0 animate-fade-in-up-delayed-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-forest-700 font-medium">Manholes</h3>
+                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p id="manholeCount" class="text-4xl font-black gradient-text">0</p>
+                <p class="text-forest-600 text-sm mt-2 opacity-70">Detected</p>
+            </div>
+
+            <!-- Road Safety Index Card -->
+            <div class="stat-card p-6 opacity-0 animate-fade-in-up-delayed-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-forest-700 font-medium">Safety Index</h3>
+                    <div class="w-10 h-10 rounded-full bg-mint-200 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-mint-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <svg class="progress-ring w-16 h-16">
+                            <circle class="text-mint-200" stroke-width="4" stroke="currentColor" fill="transparent" r="28" cx="32" cy="32"/>
+                            <circle id="progressCircle" class="progress-ring-circle text-mint-500" stroke-width="4" stroke="currentColor" fill="transparent" r="28" cx="32" cy="32" stroke-dasharray="175.93" stroke-dashoffset="175.93" stroke-linecap="round"/>
+                        </svg>
+                        <span id="safetyScore" class="absolute inset-0 flex items-center justify-center text-sm font-bold text-mint-600">0%</span>
+                    </div>
+                    <div>
+                        <p id="severityLabel" class="text-lg font-bold text-forest-800">N/A</p>
+                        <p class="text-forest-600 text-xs opacity-70">Severity Level</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center py-8 border-t border-mint-200 opacity-0 animate-fade-in-up-delayed-3">
+            <div class="milk-glass-card py-6 px-8 inline-block">
+                <p class="text-forest-700 text-sm">
+                    Engineered by <span class="gradient-text font-semibold">Muhammad Faizan</span>
+                </p>
+                <p class="text-forest-600 text-xs mt-2 mono-font opacity-70">
+                    Powered by YOLOv8 • Flask • TailwindCSS
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // DOM Elements
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadContent = document.getElementById('uploadContent');
+        const previewContent = document.getElementById('previewContent');
+        const previewImage = document.getElementById('previewImage');
+        const fileName = document.getElementById('fileName');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const btnText = document.getElementById('btnText');
+        const btnLoader = document.getElementById('btnLoader');
+        const outputPlaceholder = document.getElementById('outputPlaceholder');
+        const outputImage = document.getElementById('outputImage');
+        const potholeCount = document.getElementById('potholeCount');
+        const crackCount = document.getElementById('crackCount');
+        const manholeCount = document.getElementById('manholeCount');
+        const safetyScore = document.getElementById('safetyScore');
+        const severityLabel = document.getElementById('severityLabel');
+        const progressCircle = document.getElementById('progressCircle');
+
+        let selectedFile = null;
+        let isAnalyzing = false;
+
+        // Enter Key Listener - Triggers analyze action automatically without memory leak loops
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !isAnalyzing) {
+                e.preventDefault();
+                analyzeBtn.click();
+            }
+        });
+
+        // Upload Zone Events
+        uploadZone.addEventListener('click', () => fileInput.click());
+        
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+        
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                // Complete Memory Flush on Upload - Clear previous file buffer stream from DOM
+                flushMemoryState();
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function flushMemoryState() {
+            // Set image objects to null to release buffer streams
+            selectedFile = null;
+            
+            // Clear all image src attributes
+            if (previewImage.src) {
+                if (previewImage.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(previewImage.src);
+                }
+                previewImage.src = '';
+                previewImage.removeAttribute('src');
+            }
+            
+            if (outputImage.src) {
+                if (outputImage.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(outputImage.src);
+                }
+                outputImage.src = '';
+                outputImage.removeAttribute('src');
+            }
+            
+            // Reset text content
+            fileName.textContent = '';
+            
+            // Reset UI visibility
+            outputPlaceholder.classList.remove('hidden');
+            outputImage.classList.add('hidden');
+            
+            // Reset all counters to zero
+            potholeCount.textContent = '0';
+            crackCount.textContent = '0';
+            manholeCount.textContent = '0';
+            safetyScore.textContent = '0%';
+            severityLabel.textContent = 'N/A';
+            
+            // Reset progress ring to initial state
+            const circumference = 2 * Math.PI * 28;
+            progressCircle.style.strokeDashoffset = circumference;
+            progressCircle.style.stroke = '#22C55E';
+            safetyScore.style.color = '#22C55E';
+            severityLabel.style.color = '#166534';
+            
+            // Force garbage collection by clearing any cached data
+            if (window.gc && typeof window.gc === 'function') {
+                window.gc();
+            }
+            
+            console.log('[MEMORY] Complete flush executed - all image buffers cleared');
+        }
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file');
+                return;
+            }
+            
+            // Set new file
+            selectedFile = file;
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                fileName.textContent = file.name;
+                uploadContent.classList.add('hidden');
+                previewContent.classList.remove('hidden');
+                analyzeBtn.disabled = false;
+                console.log('[DEBUG] New image loaded:', file.name);
+            };
+            
+            reader.onerror = () => {
+                console.error('[ERROR] Failed to read file');
+                alert('Failed to read file. Please try again.');
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        // Analyze Button - Rewritten with memory-safe implementation
+        analyzeBtn.addEventListener('click', async () => {
+            // Prevent multiple simultaneous analyses
+            if (isAnalyzing) {
+                console.log('[DEBUG] Analysis already in progress, ignoring duplicate click');
+                return;
+            }
+            
+            console.log('[DEBUG] Analyze button clicked');
+            
+            // Explicitly capture current file state from fileInput.files[0]
+            const fileInputElement = document.getElementById('fileInput');
+            console.log('[DEBUG] File input element:', fileInputElement);
+            console.log('[DEBUG] File input files length:', fileInputElement ? fileInputElement.files.length : 'N/A');
+            
+            // Alert mechanism for button click without file selection
+            if (!fileInputElement || fileInputElement.files.length === 0) {
+                console.error('[ERROR] No file selected in file input');
+                alert('⚠️ Please select an image file first before clicking Analyze');
+                
+                // Visual feedback - shake the upload zone
+                uploadZone.style.animation = 'none';
+                uploadZone.offsetHeight; // Trigger reflow
+                uploadZone.style.animation = 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both';
+                return;
+            }
+            
+            const file = fileInputElement.files[0];
+            console.log('[DEBUG] Selected file:', file.name, file.type, file.size);
+            
+            // Set analyzing flag to prevent duplicate submissions
+            isAnalyzing = true;
+            
+            // Show loading state
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+            analyzeBtn.disabled = true;
+            
+            console.log('[INFO] Starting analysis for:', file.name);
+            
+            // Build fresh FormData() instance
+            const formData = new FormData();
+            formData.append('image', file);
+            console.log('[DEBUG] Fresh FormData created with image file');
+            
+            try {
+                console.log('[INFO] Sending POST request to /api/detect');
+                const response = await fetch('/api/detect', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('[INFO] Response status:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('[INFO] Response data received:', data);
+                
+                if (data.success) {
+                    console.log('[SUCCESS] Analysis successful, updating UI');
+                    
+                    // Update result canvas view with data URI prefix
+                    const resultImage = document.getElementById('outputImage');
+                    resultImage.src = 'data:image/jpeg;base64,' + data.image;
+                    
+                    // Hide placeholder and show result
+                    document.getElementById('outputPlaceholder').classList.add('hidden');
+                    resultImage.classList.remove('hidden');
+                    
+                    // Update counter texts using exact backend structure
+                    document.getElementById('potholeCount').textContent = data.counts.potholes;
+                    document.getElementById('crackCount').textContent = data.counts.cracks;
+                    document.getElementById('manholeCount').textContent = data.counts.manholes;
+                    
+                    // Update Safety Index percentage
+                    const safetyIndexElement = document.getElementById('safetyScore');
+                    safetyIndexElement.textContent = data.safety_index + '%';
+                    
+                    // Update Severity label
+                    const severityLabel = document.getElementById('severityLabel');
+                    severityLabel.textContent = data.severity;
+                    
+                    // Update progress ring based on safety index
+                    const circumference = 2 * Math.PI * 28;
+                    const offset = circumference - (data.safety_index / 100) * circumference;
+                    progressCircle.style.strokeDashoffset = offset;
+                    
+                    // Set color based on severity level
+                    let severityColor;
+                    if (data.severity === 'LOW') {
+                        severityColor = '#22C55E';
+                    } else if (data.severity === 'MODERATE') {
+                        severityColor = '#FACC15';
+                    } else {
+                        severityColor = '#EF4444';
+                    }
+                    
+                    progressCircle.style.stroke = severityColor;
+                    safetyIndexElement.style.color = severityColor;
+                    severityLabel.style.color = severityColor;
+                    
+                    console.log('[SUCCESS] UI updated successfully');
+                } else {
+                    console.error('[ERROR] Server returned error:', data.error);
+                    alert('Server Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('[ERROR] Fetch failed:', error);
+                console.error('[ERROR] Error details:', {
+                    message: error.message,
+                    stack: error.stack
+                });
+                alert('Failed to analyze image. Error: ' + error.message);
+            } finally {
+                // Reset button state and analyzing flag
+                btnText.classList.remove('hidden');
+                btnLoader.classList.add('hidden');
+                analyzeBtn.disabled = false;
+                isAnalyzing = false;
+                console.log('[DEBUG] Button state reset');
+            }
+        });
+    </script>
+</body>
+</html>
